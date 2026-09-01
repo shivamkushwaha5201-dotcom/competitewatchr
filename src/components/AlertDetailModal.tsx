@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, ExternalLink, Share2, Sparkles, CheckCheck, FileText, ArrowRight } from 'lucide-react';
+import { X, ExternalLink, Share2, CheckCheck, FileText, ArrowRight, ShieldCheck, Clock } from 'lucide-react';
 import { ChangeAlert } from '../types';
 
 interface AlertDetailModalProps {
@@ -24,7 +24,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg text-[#565e74] hover:bg-[#f2f4f6] hover:text-[#191c1e] transition-colors"
+          className="absolute top-4 right-4 p-1.5 rounded-lg text-[#565e74] hover:bg-[#f2f4f6] hover:text-[#191c1e] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
@@ -37,8 +37,9 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           <span className="font-mono-code text-[11px] font-semibold text-[#ba1a1a] bg-[#ffdad6] px-2 py-0.5 rounded tracking-wide">
             {alert.severity.toUpperCase()} ALERT
           </span>
-          <span className="text-[12px] text-[#565e74] font-mono-code ml-auto">
-            {alert.relativeTime}
+          <span className="text-[12px] text-[#565e74] font-mono-code ml-auto flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" />
+            <span>{alert.relativeTime}</span>
           </span>
         </div>
 
@@ -53,23 +54,24 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           {alert.description}
         </p>
 
-        {/* Diff Box */}
+        {/* Diff Box: Previous Real Snapshot vs Current Real Snapshot */}
         <div className="bg-[#f2f4f6] rounded-xl p-4 border border-[#c3c6d7] mb-5">
-          <div className="text-[11px] font-mono-code text-[#565e74] uppercase tracking-wider mb-2 font-semibold">
-            Detected Structural Change
+          <div className="text-[11px] font-mono-code text-[#565e74] uppercase tracking-wider mb-2 font-semibold flex items-center justify-between">
+            <span>Snapshot Comparison Diff</span>
+            <span className="text-[#004ac6] font-normal">Deterministic Extraction</span>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-[#ffffff] p-3 rounded-lg border border-[#c3c6d7]/70">
               <span className="text-[11px] font-mono-code text-[#ba1a1a] font-semibold block mb-1">
-                − Previous State
+                − Previous Real Snapshot
               </span>
-              <p className="text-[14px] text-[#434655] line-through">
+              <p className="text-[14px] text-[#434655] line-through font-medium">
                 {alert.previousValue}
               </p>
             </div>
             <div className="bg-[#ffffff] p-3 rounded-lg border border-[#004ac6]/40 ring-1 ring-[#004ac6]/20">
               <span className="text-[11px] font-mono-code text-[#004ac6] font-semibold block mb-1">
-                + New Detected State
+                + Current Real Snapshot
               </span>
               <p className="text-[14px] text-[#191c1e] font-semibold">
                 {alert.newValue}
@@ -78,19 +80,21 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           </div>
         </div>
 
-        {/* AI Insight Card */}
+        {/* Verified Website Change Card */}
         <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-4 relative overflow-hidden mb-5">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-[#004ac6]" />
           
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#004ac6]" />
+              <span className="material-symbols-outlined text-[#004ac6] text-[18px]">
+                verified
+              </span>
               <span className="font-mono-code text-[11px] font-bold text-[#004ac6] uppercase tracking-wider">
-                AI Strategic Impact Assessment
+                Automated Change Detection
               </span>
             </div>
             <span className="text-[11px] font-mono-code font-bold text-[#004ac6] bg-[#dae2fd] px-2 py-0.5 rounded">
-              {alert.aiInsight.confidence}% Confidence
+              Verified Evidence
             </span>
           </div>
 
@@ -103,7 +107,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           </p>
 
           <div className="text-[13px] text-[#191c1e]">
-            <strong className="text-[#004ac6]">Action Plan: </strong>
+            <strong className="text-[#004ac6]">Recommended Action: </strong>
             {alert.aiInsight.recommendedAction}
           </div>
 
@@ -118,18 +122,21 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           )}
         </div>
 
-        {/* Source Page URL */}
-        <div className="flex items-center justify-between text-[12px] text-[#565e74] bg-[#f7f9fb] p-2.5 rounded-lg border border-[#c3c6d7]/50 mb-5">
-          <span className="truncate max-w-[320px] font-mono-code">
-            {alert.pageUrl}
-          </span>
+        {/* Source Evidence & View Source Button */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#f7f9fb] p-3 rounded-lg border border-[#c3c6d7]/60 mb-5">
+          <div className="truncate max-w-[340px]">
+            <div className="text-[11px] font-mono-code text-[#565e74] uppercase">Source URL</div>
+            <div className="text-[13px] font-mono-code text-[#191c1e] truncate">
+              {alert.pageUrl}
+            </div>
+          </div>
           <a
             href={alert.pageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#004ac6] hover:underline flex items-center gap-1 font-medium shrink-0 ml-2"
+            className="w-full sm:w-auto bg-[#dae2fd] hover:bg-[#004ac6] hover:text-[#ffffff] text-[#00174b] px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0 shadow-xs"
           >
-            <span>Open Page</span>
+            <span>View Source</span>
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
@@ -141,7 +148,7 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
               onMarkRead(alert.id);
               onClose();
             }}
-            className="flex-1 bg-[#2563eb] text-[#ffffff] py-2.5 px-4 rounded-lg text-[14px] font-semibold hover:bg-[#004ac6] transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 bg-[#2563eb] text-[#ffffff] py-2.5 px-4 rounded-lg text-[14px] font-semibold hover:bg-[#004ac6] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <CheckCheck className="w-4 h-4" />
             <span>Mark Reviewed & Close</span>
@@ -149,13 +156,14 @@ export const AlertDetailModal: React.FC<AlertDetailModalProps> = ({
           
           <button
             onClick={() => {
-              navigator.clipboard?.writeText(`${alert.title} - ${alert.description}\nImpact: ${alert.aiInsight.businessImpact}`);
-              alert('Copied alert briefing to clipboard!');
+              navigator.clipboard?.writeText(
+                `[${alert.category.toUpperCase()}] ${alert.title}\nCompetitor: ${alert.competitorName}\nPage: ${alert.pageUrl}\nBefore: ${alert.previousValue}\nAfter: ${alert.newValue}\nDetected: ${alert.timestamp}`
+              );
             }}
-            className="bg-[#ffffff] border border-[#c3c6d7] text-[#191c1e] py-2.5 px-4 rounded-lg text-[14px] font-medium hover:bg-[#f2f4f6] transition-colors flex items-center justify-center gap-1.5"
+            className="bg-[#ffffff] border border-[#c3c6d7] text-[#191c1e] py-2.5 px-4 rounded-lg text-[14px] font-medium hover:bg-[#f2f4f6] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Share2 className="w-4 h-4" />
-            <span>Copy Briefing</span>
+            <span>Copy Diff Details</span>
           </button>
         </div>
       </div>

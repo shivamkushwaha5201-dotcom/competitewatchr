@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, ArrowRight, Play, CheckCircle2 } from 'lucide-react';
+import { Globe, ArrowRight, Play, CheckCircle2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { ChangeAlert } from '../types';
 
 interface HeroSectionProps {
@@ -19,28 +19,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onTriggerScanSimulation,
   isScanning = false
 }) => {
-  const [quickInput, setQuickInput] = useState('');
-  const [addedSuccess, setAddedSuccess] = useState(false);
-
-  const handleQuickAdd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickInput) {
-      onStartMonitoring();
-      return;
-    }
-    setAddedSuccess(true);
-    setTimeout(() => {
-      onStartMonitoring();
-      setAddedSuccess(false);
-    }, 600);
-  };
-
   return (
     <section className="py-10 md:py-16 flex flex-col items-center text-center gap-6 max-w-3xl mx-auto">
       {/* Real-time Status Badge */}
       <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#dae2fd] text-[#00174b] text-[12px] font-medium tracking-wide">
         <span className="w-2 h-2 rounded-full bg-[#004ac6] animate-pulse" />
-        <span>Live Autonomous Competitor Tracking Active</span>
+        <span>Real Website Change Monitoring Active</span>
       </div>
 
       {/* Main Headline */}
@@ -50,7 +34,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Subtitle */}
       <p className="text-[16px] md:text-[18px] text-[#434655] leading-relaxed max-w-2xl mx-auto font-normal">
-        Monitor competitor websites, pricing, product pages, and positioning. Get an AI-powered alert whenever something important changes.
+        Monitor competitor websites, pricing tiers, product pages, and positioning. Get verified alerts whenever something important actually changes on their site.
       </p>
 
       {/* Quick Start Form / Buttons */}
@@ -72,19 +56,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </button>
       </div>
 
-      {/* Dashboard Preview Widget (Matching Screen) */}
+      {/* Dashboard Preview Widget */}
       <div className="mt-6 w-full max-w-xl text-left">
         <div className="flex items-center justify-between px-1 mb-2">
           <span className="text-[12px] font-mono-code uppercase tracking-wider text-[#565e74] font-semibold">
-            Live Preview Widget
+            Live Verified Diff Sample
           </span>
           <button
             onClick={onTriggerScanSimulation}
             disabled={isScanning}
             className="text-[12px] text-[#004ac6] hover:underline flex items-center gap-1 font-medium cursor-pointer"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>{isScanning ? 'Scanning...' : 'Test AI Scan'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+            <span>{isScanning ? 'Scanning...' : 'Run Live Scan'}</span>
           </button>
         </div>
 
@@ -121,7 +105,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Price Diff Visualizer */}
           <div className="bg-[#f2f4f6] rounded-lg p-3.5 flex justify-between items-center border border-[#c3c6d7]/70">
             <div className="flex flex-col">
-              <span className="text-[11px] font-mono-code uppercase text-[#565e74]">Previous</span>
+              <span className="text-[11px] font-mono-code uppercase text-[#565e74]">Previous State</span>
               <span className="text-[15px] text-[#434655] line-through font-medium">
                 {sampleAlert.previousValue}
               </span>
@@ -145,8 +129,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           {/* Bottom quick action footer */}
           <div className="mt-3 pt-2.5 border-t border-[#f2f4f6] flex items-center justify-between text-[12px] text-[#565e74]">
             <span className="flex items-center gap-1">
-              <span className="material-symbols-outlined text-[15px] text-[#004ac6]">auto_awesome</span>
-              AI Strategic analysis attached
+              <ShieldCheck className="w-3.5 h-3.5 text-[#004ac6]" />
+              <span>Real website snapshot comparison</span>
             </span>
             <span className="text-[#004ac6] font-medium group-hover:translate-x-0.5 transition-transform inline-flex items-center gap-0.5">
               Inspect Diff →

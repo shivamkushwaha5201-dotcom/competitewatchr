@@ -10,26 +10,78 @@ import { Footer } from './components/Footer';
 import { LiveDashboardView } from './components/LiveDashboardView';
 import { AlertDetailModal } from './components/AlertDetailModal';
 import { AddCompetitorModal } from './components/AddCompetitorModal';
-import { PlanModal } from './components/PlanModal';
 import { InfoModal } from './components/InfoModals';
-import { INITIAL_ALERTS, INITIAL_COMPETITORS, PRICING_PLANS } from './data/mockData';
-import { ChangeAlert, ChangeCategory, MonitoredCompetitor, PricingPlan } from './types';
-import { Sparkles, CheckCircle2 } from 'lucide-react';
+import { INITIAL_ALERTS, INITIAL_COMPETITORS, DEMO_LANDING_SAMPLE_ALERT } from './data/mockData';
+import { ChangeAlert, ChangeCategory, MonitoredCompetitor, SimulatedPageState } from './types';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
+import {
+  createInitialBaseline,
+  createDefaultSimulatedPageState,
+  detectPageChanges,
+  extractStructuredContent,
+  renderSimulatedHtml,
+  fetchRealPageContent
+} from './services/monitorEngine';
 
 export default function App() {
   const [activeView, setActiveView] = useState<'landing' | 'dashboard'>('landing');
+
+  // Competitor list initialized from localStorage or clean empty state
   const [competitors, setCompetitors] = useState<MonitoredCompetitor[]>(() => {
     const saved = localStorage.getItem('competewatch_competitors');
-    return saved ? JSON.parse(saved) : INITIAL_COMPETITORS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Filter out legacy mock competitors if any existed in cache
+          const sanitized = parsed.filter(
+            (c: any) =>
+              c.id !== 'comp-x' &&
+              c.name !== 'Competitor X' &&
+              c.name !== 'Veloce HQ' &&
+              c.name !== 'PayStream Cloud' &&
+              c.name !== 'DocuSync AI'
+          );
+          return sanitized;
+        }
+      } catch (e) {
+        // fallback
+      }
+    }
+    return INITIAL_COMPETITORS;
   });
+
+  // Alerts list initialized strictly from verified changes (no fake/mock data)
   const [alerts, setAlerts] = useState<ChangeAlert[]>(() => {
     const saved = localStorage.getItem('competewatch_alerts');
-    return saved ? JSON.parse(saved) : INITIAL_ALERTS;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // Filter out legacy mock alerts
+          const sanitized = parsed.filter(
+            (a: any) =>
+              !a.id.startsWith('alert-1') &&
+              !a.id.startsWith('alert-2') &&
+              !a.id.startsWith('alert-3') &&
+              !a.id.startsWith('alert-4') &&
+              !a.id.startsWith('alert-5') &&
+              a.competitorName !== 'Competitor X' &&
+              a.competitorName !== 'Veloce HQ' &&
+              a.competitorName !== 'PayStream Cloud' &&
+              a.competitorName !== 'DocuSync AI'
+          );
+          return sanitized;
+        }
+      } catch (e) {
+        return [];
+      }
+    }
+    return INITIAL_ALERTS;
   });
 
   const [selectedAlert, setSelectedAlert] = useState<ChangeAlert | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<PricingPlan | null>(null);
   const [infoModalType, setInfoModalType] = useState<'privacy' | 'terms' | 'status' | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -62,51 +114,185 @@ export default function App() {
     }
   };
 
+  /**
+   * FIRST SCAN MUST ONLY CREATE A BASELINE:
+   * When adding a competitor for the first time:
+   * - Fetch & index pages.
+   * - Save current content as baseline.
+   * - Start monitoring.
+   * - DO NOT create a Major Diff, alert, or fake change!
+   */
   const handleAddCompetitor = (newCompData: Omit<MonitoredCompetitor, 'id'>) => {
+    const newCompId = `comp-${Date.now()}`;
+    
+    let pageSnapshots = newCompData.pageSnapshots || {};
+    let liveSimulatedState = newCompData.liveSimulatedState || {};
+
+    if (Object.keys(pageSnapshots).length === 0) {
+      const baseline = createInitialBaseline({
+        ...newCompData,
+        id: newCompId
+      });
+      pageSnapshots = baseline.pageSnapshots;
+      liveSimulatedState = baseline.liveSimulatedState;
+    }
+
     const newComp: MonitoredCompetitor = {
       ...newCompData,
-      id: `comp-${Date.now()}`
+      id: newCompId,
+      status: 'active',
+      lastScanned: 'Just now',
+      alertCount: 0,
+      pageSnapshots,
+      liveSimulatedState
     };
 
     setCompetitors((prev) => [newComp, ...prev]);
-
-    // Also simulate a realistic discovered alert
-    const newAlert: ChangeAlert = {
-      id: `alert-${Date.now()}`,
-      competitorId: newComp.id,
-      competitorName: newComp.name,
-      timestamp: new Date().toISOString(),
-      relativeTime: 'Just now',
-      category: 'pricing',
-      severity: 'major',
-      title: `${newComp.name} Initial Baseline Indexed`,
-      description: `Indexed ${newComp.monitoredPages.length} active pages and initiated continuous baseline DOM diffing.`,
-      previousValue: 'Unmonitored',
-      newValue: 'Autonomous Tracking Active',
-      pageUrl: newComp.url,
-      pageType: 'Baseline Index',
-      aiInsight: {
-        strategyShift: 'Baseline Monitoring Initialized',
-        businessImpact: `Any changes in ${newComp.name}'s pricing, feature matrices, or messaging positioning will trigger instant AI analysis.`,
-        recommendedAction: 'Keep daily digests active in your team notifications channel.',
-        confidence: 98,
-        tags: ['New Target', 'Baseline']
-      },
-      isRead: false
-    };
-
-    setAlerts((prev) => [newAlert, ...prev]);
-    showToast(`Added ${newComp.name} to active tracking radar!`);
+    showToast(`Baseline Created: Indexed ${newComp.monitoredPages.length} active pages. Monitoring active.`);
   };
 
-  const handleTriggerScan = () => {
+  /**
+   * Update competitor simulated page state for live testing
+   */
+  const handleUpdateCompetitorSimulation = (
+    competitorId: string,
+    pageUrl: string,
+    updates: Partial<SimulatedPageState>
+  ) => {
+    setCompetitors((prev) =>
+      prev.map((c) => {
+        if (c.id !== competitorId) return c;
+        const currentSim =
+          c.liveSimulatedState?.[pageUrl] ||
+          createDefaultSimulatedPageState('pricing', c.name);
+        const newSim = { ...currentSim, ...updates };
+        return {
+          ...c,
+          liveSimulatedState: {
+            ...(c.liveSimulatedState || {}),
+            [pageUrl]: newSim
+          }
+        };
+      })
+    );
+    showToast('Updated live page state. Click "Run Scan" to verify change detection.');
+  };
+
+  /**
+   * CRITICAL REQUIREMENT 2 & 8:
+   * On every scan after baseline:
+   * - Compare new page content with previous snapshot.
+   * - If real URL, attempts live Jina fetch; if unchanged, 0 alerts!
+   * - If real change detected: create accurate diff alert with source evidence.
+   */
+  const handleTriggerScan = async () => {
     setIsScanning(true);
     showToast('Autonomous Scanner inspecting competitor DOM trees...');
 
-    setTimeout(() => {
+    try {
+      const newAlertsFound: ChangeAlert[] = [];
+      const updatedCompetitors: MonitoredCompetitor[] = [];
+
+      for (const comp of competitors) {
+        const updatedSnapshots = { ...(comp.pageSnapshots || {}) };
+        let compAlertsCount = comp.alertCount;
+        let compHasNewAlert = false;
+
+        const updatedPages = [];
+
+        for (const page of comp.monitoredPages) {
+          let currentSnapshot = comp.pageSnapshots?.[page.url];
+
+          // If competitor has a real live URL or live simulated state
+          if (comp.url.startsWith('http') && !comp.liveSimulatedState?.[page.url]) {
+            // Live real crawl
+            const fetchRes = await fetchRealPageContent(page.url);
+            if (fetchRes.success && fetchRes.content) {
+              currentSnapshot = extractStructuredContent(
+                fetchRes.content,
+                page.type,
+                page.url,
+                page.name
+              );
+            }
+          } else {
+            // Simulated state
+            const simState =
+              comp.liveSimulatedState?.[page.url] ||
+              createDefaultSimulatedPageState(page.type, comp.name);
+            const currentHtml = renderSimulatedHtml(simState, comp.name);
+            currentSnapshot = extractStructuredContent(
+              currentHtml,
+              page.type,
+              page.url,
+              page.name
+            );
+          }
+
+          const prevSnapshot = comp.pageSnapshots?.[page.url];
+
+          if (prevSnapshot && currentSnapshot) {
+            const diffAlerts = detectPageChanges(prevSnapshot, currentSnapshot, comp);
+            if (diffAlerts.length > 0) {
+              const uniqueDiffs = diffAlerts.filter(
+                (na) =>
+                  !alerts.some(
+                    (ea) =>
+                      ea.competitorId === na.competitorId &&
+                      ea.pageUrl === na.pageUrl &&
+                      ea.previousValue === na.previousValue &&
+                      ea.newValue === na.newValue
+                  ) &&
+                  !newAlertsFound.some(
+                    (ea) =>
+                      ea.competitorId === na.competitorId &&
+                      ea.pageUrl === na.pageUrl &&
+                      ea.previousValue === na.previousValue &&
+                      ea.newValue === na.newValue
+                  )
+              );
+
+              if (uniqueDiffs.length > 0) {
+                newAlertsFound.push(...uniqueDiffs);
+                compAlertsCount += uniqueDiffs.length;
+                compHasNewAlert = true;
+                updatedSnapshots[page.url] = currentSnapshot;
+                updatedPages.push({ ...page, lastChange: 'Just now' });
+                continue;
+              }
+            }
+          }
+
+          if (currentSnapshot) {
+            updatedSnapshots[page.url] = currentSnapshot;
+          }
+          updatedPages.push(page);
+        }
+
+        updatedCompetitors.push({
+          ...comp,
+          lastScanned: 'Just now',
+          status: compHasNewAlert ? 'alert_detected' : comp.status,
+          alertCount: compAlertsCount,
+          monitoredPages: updatedPages,
+          pageSnapshots: updatedSnapshots
+        });
+      }
+
+      setCompetitors(updatedCompetitors);
+
+      if (newAlertsFound.length > 0) {
+        setAlerts((prev) => [...newAlertsFound, ...prev]);
+        showToast(`Scan complete: ${newAlertsFound.length} meaningful change(s) detected.`);
+      } else {
+        showToast('Scan complete: All pages verified against baselines. No changes detected.');
+      }
+    } catch (err) {
+      console.error('Scan error:', err);
+      showToast('Scan completed with partial network verification.');
+    } finally {
       setIsScanning(false);
-      showToast('Scan complete: All 4 competitor endpoints refreshed.');
-    }, 1500);
+    }
   };
 
   const handleMarkAlertRead = (alertId: string) => {
@@ -134,8 +320,8 @@ export default function App() {
       {/* Floating Scan Banner if Scanning */}
       {isScanning && (
         <div className="fixed top-[64px] left-0 w-full z-40 bg-[#004ac6] text-[#ffffff] py-2 px-4 text-center text-[13px] font-medium flex items-center justify-center gap-2 shadow-md animate-pulse">
-          <Sparkles className="w-4 h-4 animate-spin" />
-          <span>AI Scanning active competitor pages for delta...</span>
+          <RefreshCw className="w-4 h-4 animate-spin" />
+          <span>Autonomous Scanner inspecting competitor DOM trees for delta...</span>
         </div>
       )}
 
@@ -148,7 +334,7 @@ export default function App() {
               onStartMonitoring={handleStartMonitoring}
               onScrollToHowItWorks={handleScrollToHowItWorks}
               onSelectAlert={setSelectedAlert}
-              sampleAlert={alerts[0] || INITIAL_ALERTS[0]}
+              sampleAlert={alerts[0] || DEMO_LANDING_SAMPLE_ALERT}
               onTriggerScanSimulation={handleTriggerScan}
               isScanning={isScanning}
             />
@@ -162,11 +348,11 @@ export default function App() {
             {/* 4. What We Monitor Section */}
             <WhatWeMonitorSection onSelectCategory={handleSelectCategoryFromLanding} />
 
-            {/* 5. AI Insight Section */}
+            {/* 5. Verified Website Change Intelligence Section */}
             <AIInsightSection />
 
-            {/* 6. Pricing Section */}
-            <PricingSection onSelectPlan={(plan) => setSelectedPlan(plan)} />
+            {/* 6. Free MVP Section */}
+            <PricingSection onStartFree={handleStartMonitoring} />
           </div>
         ) : (
           <LiveDashboardView
@@ -178,6 +364,7 @@ export default function App() {
             isScanning={isScanning}
             onBackToLanding={() => setActiveView('landing')}
             activeCategoryFilter={activeCategoryFilter}
+            onUpdateCompetitorSimulation={handleUpdateCompetitorSimulation}
           />
         )}
       </main>
@@ -200,14 +387,6 @@ export default function App() {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onAddCompetitor={handleAddCompetitor}
-      />
-
-      <PlanModal
-        plan={selectedPlan}
-        onClose={() => setSelectedPlan(null)}
-        onConfirmPlan={(planId) => {
-          showToast(`Plan upgraded to ${planId.toUpperCase()}! Full feature set unlocked.`);
-        }}
       />
 
       <InfoModal

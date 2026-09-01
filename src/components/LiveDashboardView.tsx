@@ -26,6 +26,7 @@ interface LiveDashboardViewProps {
   isScanning: boolean;
   onBackToLanding: () => void;
   activeCategoryFilter?: ChangeCategory | 'all';
+  onUpdateCompetitorSimulation?: (competitorId: string, pageUrl: string, updates: any) => void;
 }
 
 export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
@@ -36,12 +37,19 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
   onTriggerScan,
   isScanning,
   onBackToLanding,
-  activeCategoryFilter = 'all'
+  activeCategoryFilter = 'all',
+  onUpdateCompetitorSimulation
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<ChangeCategory | 'all'>(activeCategoryFilter);
   const [severityFilter, setSeverityFilter] = useState<'all' | 'critical' | 'major' | 'minor'>('all');
   const [selectedCompetitorId, setSelectedCompetitorId] = useState<string | 'all'>('all');
+  const [isTestSandboxOpen, setIsTestSandboxOpen] = useState(false);
+  const [testTargetCompId, setTestTargetCompId] = useState<string>(competitors[0]?.id || '');
+  const [customPriceInput, setCustomPriceInput] = useState('$39/mo');
+  const [customCtaInput, setCustomCtaInput] = useState('Start Free Trial');
+  const [customFeatureInput, setCustomFeatureInput] = useState('AI Automation');
+  const [customHeadlineInput, setCustomHeadlineInput] = useState('The Next-Gen Unified Operations Platform');
 
   const filteredAlerts = alerts.filter((alert) => {
     if (categoryFilter !== 'all' && alert.category !== categoryFilter) return false;
@@ -61,6 +69,9 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
 
   const criticalCount = alerts.filter((a) => a.severity === 'critical').length;
   const majorCount = alerts.filter((a) => a.severity === 'major').length;
+  const totalMonitoredPages = competitors.reduce((acc, c) => acc + c.monitoredPages.length, 0);
+
+  const selectedTargetComp = competitors.find((c) => c.id === testTargetCompId) || competitors[0];
 
   return (
     <div className="w-full max-w-[1440px] mx-auto px-4 md:px-8 py-6 text-left">
@@ -81,11 +92,23 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
             Competitor Intelligence Feed
           </h1>
           <p className="text-[14px] text-[#434655] mt-0.5">
-            Real-time DOM diffs, pricing shifts, and AI tactical counter-measures.
+            Deterministic DOM diffs, pricing changes, and automated change summaries without fake data.
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            onClick={() => setIsTestSandboxOpen(!isTestSandboxOpen)}
+            className={`border px-3.5 py-2 rounded-lg text-[13px] font-semibold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+              isTestSandboxOpen
+                ? 'bg-[#dae2fd] border-[#004ac6] text-[#00174b]'
+                : 'bg-[#ffffff] border-[#c3c6d7] text-[#191c1e] hover:bg-[#f2f4f6]'
+            }`}
+          >
+            <SlidersHorizontal className="w-4 h-4 text-[#004ac6]" />
+            <span>{isTestSandboxOpen ? 'Hide Test Sandbox' : 'Test Change Simulator'}</span>
+          </button>
+
           <button
             onClick={onTriggerScan}
             disabled={isScanning}
@@ -105,6 +128,208 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
         </div>
       </div>
 
+      {/* Interactive Test Simulator Sandbox (Satisfies User Test Flow Requirement) */}
+      {isTestSandboxOpen && (
+        <div className="my-6 bg-[#ffffff] border-2 border-[#004ac6]/40 rounded-xl p-5 shadow-md animate-fadeIn">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#c3c6d7]/60">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[#004ac6] text-[20px]">
+                  science
+                </span>
+                <h3 className="text-[16px] font-bold text-[#191c1e]">
+                  Live Competitor Change Simulator & Sandbox
+                </h3>
+              </div>
+              <p className="text-[13px] text-[#434655] mt-0.5">
+                Simulate competitor website changes to test the deterministic DOM parsing, pricing deltas, and zero-false-alert logic in real time.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[12px] font-mono-code text-[#565e74]">Target:</span>
+              <select
+                value={testTargetCompId || competitors[0]?.id}
+                onChange={(e) => setTestTargetCompId(e.target.value)}
+                className="text-[13px] px-2.5 py-1.5 border border-[#c3c6d7] rounded-lg bg-[#f7f9fb] text-[#191c1e] font-semibold"
+              >
+                {competitors.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.monitoredPages.length} pages)
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4 text-[13px]">
+            {/* 1. Pricing Delta Test */}
+            <div className="bg-[#f7f9fb] border border-[#c3c6d7] rounded-lg p-3.5 space-y-2">
+              <div className="font-bold text-[#ba1a1a] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">payments</span>
+                <span>1. Test Pricing Change</span>
+              </div>
+              <p className="text-[12px] text-[#565e74]">
+                Update the Pro plan price on <span className="font-mono-code">/pricing</span>:
+              </p>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={customPriceInput}
+                  onChange={(e) => setCustomPriceInput(e.target.value)}
+                  placeholder="$39/mo or €29/mo or ₹1,299"
+                  className="w-full px-2.5 py-1 text-[12px] font-mono-code border border-[#c3c6d7] rounded bg-[#ffffff]"
+                />
+                <button
+                  onClick={() => {
+                    if (selectedTargetComp && onUpdateCompetitorSimulation) {
+                      const pricingPage = selectedTargetComp.monitoredPages.find((p) => p.type === 'pricing') || selectedTargetComp.monitoredPages[0];
+                      if (pricingPage) {
+                        onUpdateCompetitorSimulation(selectedTargetComp.id, pricingPage.url, {
+                          pricingTiers: [
+                            { planName: 'Starter', price: '$0/mo', period: '/mo', raw: 'Starter — $0/mo' },
+                            { planName: 'Pro', price: customPriceInput, period: '/mo', raw: `Pro — ${customPriceInput}` },
+                            { planName: 'Enterprise', price: '$99/mo', period: '/mo', raw: 'Enterprise — $99/mo' }
+                          ]
+                        });
+                      }
+                    }
+                  }}
+                  className="bg-[#2563eb] hover:bg-[#004ac6] text-[#ffffff] px-3 py-1 rounded text-[12px] font-semibold shrink-0 cursor-pointer"
+                >
+                  Apply $
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {['$39/mo', '$49/mo', '€29/mo', '£35/mo', '₹1,299/mo', '¥4,900'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setCustomPriceInput(p)}
+                    className="text-[11px] font-mono-code bg-[#ffffff] hover:bg-[#dae2fd] text-[#434655] px-1.5 py-0.5 rounded border border-[#c3c6d7]/60 cursor-pointer"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 2. CTA Delta Test */}
+            <div className="bg-[#f7f9fb] border border-[#c3c6d7] rounded-lg p-3.5 space-y-2">
+              <div className="font-bold text-[#004ac6] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">touch_app</span>
+                <span>2. Test CTA Change</span>
+              </div>
+              <p className="text-[12px] text-[#565e74]">
+                Update button text on homepage:
+              </p>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={customCtaInput}
+                  onChange={(e) => setCustomCtaInput(e.target.value)}
+                  placeholder="e.g. Start Free Trial"
+                  className="w-full px-2.5 py-1 text-[12px] font-mono-code border border-[#c3c6d7] rounded bg-[#ffffff]"
+                />
+                <button
+                  onClick={() => {
+                    if (selectedTargetComp && onUpdateCompetitorSimulation) {
+                      const msgPage = selectedTargetComp.monitoredPages.find((p) => p.type === 'messaging') || selectedTargetComp.monitoredPages[0];
+                      if (msgPage) {
+                        onUpdateCompetitorSimulation(selectedTargetComp.id, msgPage.url, {
+                          primaryCTA: customCtaInput
+                        });
+                      }
+                    }
+                  }}
+                  className="bg-[#2563eb] hover:bg-[#004ac6] text-[#ffffff] px-3 py-1 rounded text-[12px] font-semibold shrink-0 cursor-pointer"
+                >
+                  Apply CTA
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {['Start Free Trial', 'Book an Enterprise Demo', 'Talk to Sales'].map((cta) => (
+                  <button
+                    key={cta}
+                    onClick={() => setCustomCtaInput(cta)}
+                    className="text-[11px] bg-[#ffffff] hover:bg-[#dae2fd] text-[#434655] px-1.5 py-0.5 rounded border border-[#c3c6d7]/60 cursor-pointer"
+                  >
+                    {cta}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Features Delta Test */}
+            <div className="bg-[#f7f9fb] border border-[#c3c6d7] rounded-lg p-3.5 space-y-2">
+              <div className="font-bold text-[#004ac6] flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px]">extension</span>
+                <span>3. Test New Feature</span>
+              </div>
+              <p className="text-[12px] text-[#565e74]">
+                Add feature to feature matrix:
+              </p>
+              <div className="flex gap-1.5">
+                <input
+                  type="text"
+                  value={customFeatureInput}
+                  onChange={(e) => setCustomFeatureInput(e.target.value)}
+                  placeholder="e.g. AI Automation"
+                  className="w-full px-2.5 py-1 text-[12px] font-mono-code border border-[#c3c6d7] rounded bg-[#ffffff]"
+                />
+                <button
+                  onClick={() => {
+                    if (selectedTargetComp && onUpdateCompetitorSimulation) {
+                      const featPage = selectedTargetComp.monitoredPages.find((p) => p.type === 'features') || selectedTargetComp.monitoredPages[0];
+                      if (featPage) {
+                        onUpdateCompetitorSimulation(selectedTargetComp.id, featPage.url, {
+                          features: ['Real-time Collaboration', 'Automated Backlog Grooming', customFeatureInput]
+                        });
+                      }
+                    }
+                  }}
+                  className="bg-[#2563eb] hover:bg-[#004ac6] text-[#ffffff] px-3 py-1 rounded text-[12px] font-semibold shrink-0 cursor-pointer"
+                >
+                  Add Feat
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {['AI Automation', 'SOC-2 Compliance Vault', 'Predictive Backlog Scoring'].map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setCustomFeatureInput(f)}
+                    className="text-[11px] bg-[#ffffff] hover:bg-[#dae2fd] text-[#434655] px-1.5 py-0.5 rounded border border-[#c3c6d7]/60 cursor-pointer"
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 4. Run Scan & Verify */}
+            <div className="bg-[#dae2fd]/30 border border-[#004ac6]/30 rounded-lg p-3.5 flex flex-col justify-between">
+              <div>
+                <div className="font-bold text-[#00174b] flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[16px]">sync</span>
+                  <span>4. Run Scanner</span>
+                </div>
+                <p className="text-[12px] text-[#434655] mt-1">
+                  After applying any change (or without changes), click below to run the deterministic diff comparison.
+                </p>
+              </div>
+
+              <button
+                onClick={onTriggerScan}
+                disabled={isScanning}
+                className="w-full bg-[#004ac6] text-[#ffffff] py-2 px-3 rounded-lg font-semibold hover:bg-[#003899] transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs disabled:opacity-50 mt-3"
+              >
+                <RefreshCw className={`w-4 h-4 ${isScanning ? 'animate-spin' : ''}`} />
+                <span>{isScanning ? 'Comparing Snapshots...' : 'Run Scan Now'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 my-6">
         <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-4 shadow-2xs">
@@ -117,7 +342,7 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
           </div>
           <div className="text-[12px] text-[#565e74] mt-1 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>All scans operational</span>
+            <span>{totalMonitoredPages} pages indexed in baseline</span>
           </div>
         </div>
 
@@ -130,7 +355,7 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
             {criticalCount}
           </div>
           <div className="text-[12px] text-[#565e74] mt-1">
-            Requires executive review
+            Pricing & rate modifications
           </div>
         </div>
 
@@ -149,17 +374,18 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
 
         <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-4 shadow-2xs">
           <div className="flex items-center justify-between text-[#004ac6] text-[12px] font-mono-code font-semibold">
-            <span>AI INSIGHTS</span>
-            <Sparkles className="w-4 h-4 text-[#004ac6]" />
+            <span>AUTOMATED MONITORING</span>
+            <span className="material-symbols-outlined text-[18px] text-[#004ac6]">verified</span>
           </div>
           <div className="text-[26px] font-bold text-[#004ac6] mt-1">
-            100%
+            {alerts.length} <span className="text-[14px] font-normal text-[#565e74]">Total Diffs</span>
           </div>
           <div className="text-[12px] text-[#565e74] mt-1">
-            Full tactical breakdown
+            Deterministic DOM verification
           </div>
         </div>
       </div>
+
 
       {/* Main Grid: Tracked Competitors List + Alert Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -183,48 +409,67 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
           </div>
 
           <div className="space-y-2.5">
-            {competitors.map((comp) => {
-              const isSelected = selectedCompetitorId === comp.id;
-              return (
-                <div
-                  key={comp.id}
-                  onClick={() => setSelectedCompetitorId(isSelected ? 'all' : comp.id)}
-                  className={`bg-[#ffffff] border rounded-xl p-3.5 transition-all cursor-pointer select-none ${
-                    isSelected
-                      ? 'border-[#004ac6] ring-1 ring-[#004ac6] bg-[#dae2fd]/15 shadow-xs'
-                      : 'border-[#c3c6d7] hover:border-[#737686]'
-                  }`}
+            {competitors.length === 0 ? (
+              <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-5 text-center shadow-2xs">
+                <Globe className="w-8 h-8 text-[#004ac6] mx-auto mb-2 opacity-80" />
+                <p className="text-[14px] font-semibold text-[#191c1e]">
+                  No competitors tracked yet
+                </p>
+                <p className="text-[12px] text-[#565e74] mt-1 mb-3">
+                  Add any website (e.g. Bolt, Linear, Supabase) to generate initial baseline snapshots.
+                </p>
+                <button
+                  onClick={onOpenAddCompetitor}
+                  className="bg-[#2563eb] text-[#ffffff] px-3.5 py-1.5 rounded-lg text-[12px] font-semibold hover:bg-[#004ac6] transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-semibold text-[15px] text-[#191c1e]">
-                      {comp.name}
-                    </span>
-                    <span className="text-[11px] font-mono-code text-[#565e74] bg-[#f2f4f6] px-2 py-0.5 rounded">
-                      {comp.frequency}
-                    </span>
-                  </div>
-
-                  <div className="text-[12px] text-[#565e74] font-mono-code truncate mb-2">
-                    {comp.url}
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2 border-t border-[#f2f4f6] text-[12px]">
-                    <span className="text-[#434655]">
-                      {comp.monitoredPages.length} pages indexed
-                    </span>
-                    {comp.alertCount > 0 ? (
-                      <span className="text-[11px] font-mono-code font-semibold text-[#ba1a1a] bg-[#ffdad6] px-2 py-0.5 rounded">
-                        {comp.alertCount} new {comp.alertCount === 1 ? 'alert' : 'alerts'}
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Track Competitor</span>
+                </button>
+              </div>
+            ) : (
+              competitors.map((comp) => {
+                const isSelected = selectedCompetitorId === comp.id;
+                return (
+                  <div
+                    key={comp.id}
+                    onClick={() => setSelectedCompetitorId(isSelected ? 'all' : comp.id)}
+                    className={`bg-[#ffffff] border rounded-xl p-3.5 transition-all cursor-pointer select-none ${
+                      isSelected
+                        ? 'border-[#004ac6] ring-1 ring-[#004ac6] bg-[#dae2fd]/15 shadow-xs'
+                        : 'border-[#c3c6d7] hover:border-[#737686]'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-semibold text-[15px] text-[#191c1e]">
+                        {comp.name}
                       </span>
-                    ) : (
-                      <span className="text-[11px] font-mono-code text-emerald-600">
-                        Up to date
+                      <span className="text-[11px] font-mono-code text-[#565e74] bg-[#f2f4f6] px-2 py-0.5 rounded">
+                        {comp.frequency}
                       </span>
-                    )}
+                    </div>
+
+                    <div className="text-[12px] text-[#565e74] font-mono-code truncate mb-2">
+                      {comp.canonicalUrl || comp.url}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-[#f2f4f6] text-[12px]">
+                      <span className="text-[#434655]">
+                        {comp.monitoredPages.length} pages indexed
+                      </span>
+                      {comp.alertCount > 0 ? (
+                        <span className="text-[11px] font-mono-code font-semibold text-[#ba1a1a] bg-[#ffdad6] px-2 py-0.5 rounded">
+                          {comp.alertCount} new {comp.alertCount === 1 ? 'alert' : 'alerts'}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] font-mono-code text-emerald-600 font-medium">
+                          Up to date
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -319,27 +564,39 @@ export const LiveDashboardView: React.FC<LiveDashboardViewProps> = ({
 
           {/* List of Alerts */}
           {filteredAlerts.length === 0 ? (
-            <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-8 text-center">
-              <span className="material-symbols-outlined text-[#737686] text-[36px] mb-2">
-                search_off
+            <div className="bg-[#ffffff] border border-[#c3c6d7] rounded-xl p-8 text-center shadow-2xs">
+              <span className="material-symbols-outlined text-[#004ac6] text-[40px] mb-2">
+                verified
               </span>
-              <p className="text-[15px] font-semibold text-[#191c1e]">
-                No change alerts matching current filter
+              <p className="text-[16px] font-bold text-[#191c1e]">
+                No verified changes detected.
               </p>
-              <p className="text-[13px] text-[#565e74] mt-1">
-                Try clearing your search query or reset category filter.
+              <p className="text-[13px] text-[#565e74] mt-1 max-w-md mx-auto leading-relaxed">
+                CompeteWatch is continuously monitoring your competitors for real website, pricing, and messaging changes. Click <span className="font-semibold text-[#191c1e]">"Run Scan"</span> anytime to perform a fresh DOM tree inspection.
               </p>
-              <button
-                onClick={() => {
-                  setCategoryFilter('all');
-                  setSeverityFilter('all');
-                  setSelectedCompetitorId('all');
-                  setSearchQuery('');
-                }}
-                className="mt-4 bg-[#2563eb] text-[#ffffff] px-4 py-1.5 rounded-lg text-[13px] font-medium"
-              >
-                Reset Filters
-              </button>
+              <div className="mt-5 flex items-center justify-center gap-3">
+                <button
+                  onClick={onTriggerScan}
+                  disabled={isScanning}
+                  className="bg-[#2563eb] text-[#ffffff] px-4 py-2 rounded-lg text-[13px] font-semibold hover:bg-[#004ac6] transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? 'animate-spin' : ''}`} />
+                  <span>{isScanning ? 'Inspecting DOM...' : 'Run Scan Now'}</span>
+                </button>
+                {searchQuery || categoryFilter !== 'all' || severityFilter !== 'all' || selectedCompetitorId !== 'all' ? (
+                  <button
+                    onClick={() => {
+                      setCategoryFilter('all');
+                      setSeverityFilter('all');
+                      setSelectedCompetitorId('all');
+                      setSearchQuery('');
+                    }}
+                    className="bg-[#f2f4f6] text-[#434655] px-3.5 py-2 rounded-lg text-[13px] font-medium hover:bg-[#e0e3e5] transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                ) : null}
+              </div>
             </div>
           ) : (
             <div className="space-y-3">
