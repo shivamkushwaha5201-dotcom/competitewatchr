@@ -1,0 +1,6 @@
+{
+  "name": "CompeteWatch",
+  "description": "AI-powered competitor website, pricing, and messaging change monitor and intelligent alert system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
